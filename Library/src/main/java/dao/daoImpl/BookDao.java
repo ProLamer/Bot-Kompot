@@ -1,5 +1,6 @@
-package dao;
+package dao.daoImpl;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,9 +10,10 @@ import java.util.List;
 import java.util.Scanner;
 
 import connection.ConnectionToDB;
+import dao.BookDaoInterface;
 import model.BookModel;
 
-public class BookDao {
+public class BookDao implements BookDaoInterface {
 	private static final String ADD_BOOK_STATEMENT = "INSERT INTO books (nameOfBook, author) VALUES (?,?);";
 	private static final String UPDATE_BOOK_STATEMENT = "UPDATE books SET nameOfBook=(?), author=(?) WHERE idBooks = (?);";
 	private static final String REMOVE_BOOK_BY_ID_STATEMENT = "DELETE FROM books WHERE idBooks = (?)";
@@ -25,35 +27,41 @@ public class BookDao {
 	ArrayList<Integer> idList = new ArrayList<>();
 	int counter = 0;
 
-	public boolean addBook(BookModel book) {
-		connection = ConnectionToDB.getInstance();
-		int inserted = 0;
-		try {
-			preparedStatement = connection.prepareStatement(ADD_BOOK_STATEMENT);
-			preparedStatement.setString(1, book.getNameOfBook());
-			preparedStatement.setString(2, book.getAuthor());
-			inserted = preparedStatement.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
+	private <T> T getClass(Class<T> model, ResultSet rs)
+			throws InstantiationException, IllegalAccessException, SQLException {
+
+		T t = model.newInstance();
+
+		Field[] fields = model.getDeclaredFields();
+		for (Field field : fields) {
+			field.setAccessible(true);
+			field.set(t, rs.getString(field.getName()));
 		}
-		return inserted > 0;
+		return t;
 	}
 
-	public boolean editBook(BookModel book) {
+	@Override
+	public boolean addBook(BookModel book) throws SQLException {
 		connection = ConnectionToDB.getInstance();
-		int inserted = 0;
-		try {
-			preparedStatement = connection.prepareStatement(UPDATE_BOOK_STATEMENT);
-			preparedStatement.setString(1, book.getNameOfBook());
-			preparedStatement.setString(2, book.getAuthor());
-			preparedStatement.setInt(3, book.getIdBooks());
-			inserted = preparedStatement.executeUpdate();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return inserted > 0;
+		preparedStatement = connection.prepareStatement(ADD_BOOK_STATEMENT);
+		preparedStatement.setString(1, book.getNameOfBook());
+		preparedStatement.setString(2, book.getAuthor());
+
+		return preparedStatement.executeUpdate() > 0;
 	}
 
+	@Override
+	public boolean editBook(BookModel book) throws SQLException {
+		connection = ConnectionToDB.getInstance();
+		preparedStatement = connection.prepareStatement(UPDATE_BOOK_STATEMENT);
+		preparedStatement.setString(1, book.getNameOfBook());
+		preparedStatement.setString(2, book.getAuthor());
+		preparedStatement.setString(3, book.getIdBooks());
+
+		return preparedStatement.executeUpdate() > 0;
+	}
+
+	@Override
 	public boolean removeBook(BookModel book) {
 		String sameBooks = checkSame(book.getNameOfBook());
 		if (counter > 1) {
@@ -73,32 +81,32 @@ public class BookDao {
 	}
 
 	private boolean deleteBook(String nameOfBook) {
-		int inserted = 0;
+		boolean result = false;
 		connection = ConnectionToDB.getInstance();
 		try {
 			preparedStatement = connection.prepareStatement(REMOVE_BOOK_BY_NAME_STATEMENT);
 			preparedStatement.setString(1, nameOfBook);
-			inserted = preparedStatement.executeUpdate();
+			result = preparedStatement.execute();
 		} catch (SQLException e) {
 			System.out.println("incorect!");
 		}
-		return inserted > 0;
+		return result;
 	}
 
 	private boolean deleteBook(int inputedId) {
-		int inserted = 0;
+		boolean result = false;
 		connection = ConnectionToDB.getInstance();
 		try {
 			preparedStatement = connection.prepareStatement(REMOVE_BOOK_BY_ID_STATEMENT);
 			preparedStatement.setInt(1, inputedId);
-			inserted = preparedStatement.executeUpdate();
+			result = preparedStatement.execute();
 		} catch (SQLException e) {
 			System.out.println("incorect!");
 		}
-		return inserted > 0;
+		return result;
 	}
 
-	public String checkSame(String nameOfBook) {
+	private String checkSame(String nameOfBook) {
 		connection = ConnectionToDB.getInstance();
 		int id;
 		String author;
@@ -123,27 +131,17 @@ public class BookDao {
 		return result;
 	}
 
-	public List<String> getAllBooks() {
-		List<String> listOfBooks = new ArrayList<>();
-		int id;
-		String author;
-		String name;
-		String result = "";
+	@Override
+	public List<BookModel> getAllBooks() throws InstantiationException, IllegalAccessException, SQLException {
+		List<BookModel> listOfBooks = new ArrayList<>();
 		connection = ConnectionToDB.getInstance();
-
-		try {
-			preparedStatement = connection.prepareStatement(GET_INFORMATION_STATEMENT);
-			ResultSet setOfBooks = preparedStatement.executeQuery();
-			while (setOfBooks.next()) {
-				id = setOfBooks.getInt(1);
-				author = setOfBooks.getString(3);
-				name = setOfBooks.getString(2);
-				result = id + ". " + author + " " + name;
-				listOfBooks.add(result);
-			}
-		} catch (SQLException e) {
-			System.out.println("Can not connect to database...	");
+		preparedStatement = connection.prepareStatement(GET_INFORMATION_STATEMENT);
+		ResultSet setOfBooks = preparedStatement.executeQuery();
+		while (setOfBooks.next()) {
+			BookModel newBook = (BookModel) getClass(model.BookModel.class, setOfBooks);
+			listOfBooks.add(newBook);
 		}
 		return listOfBooks;
 	}
+
 }

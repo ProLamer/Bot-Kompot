@@ -1,6 +1,6 @@
 package app;
 
-import service.BookService;
+import service.serviceImpl.BookService;
 
 public class Main {
 	public static void main(String[] args) {
