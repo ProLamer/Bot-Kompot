@@ -1,0 +1,22 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+#Run_Button{
+	-fx-background-image: url("robot.png");
+}
+#Run_Button:hover{
+	 -fx-background-color: lightblue;
+}
+#Likes_Button{
+	-fx-background-image: url("likes.png");
+}
+#Likes_Button:hover{
+	 -fx-background-color: lightblue;
+}
+#clean_button{
+	-fx-background-image: url("garbage.png");
+}
+#clean_button:hover{
+	 -fx-background-color: lightblue;
+}
+#Main_Background{
+	-fx-background-image: url("background.jpg");
+}
